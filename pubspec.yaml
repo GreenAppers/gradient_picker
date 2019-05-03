@@ -1,0 +1,13 @@
+name: gradient_picker
+version: 1.0.0+0
+description: Provides a gradient picker
+author: Green Appers, Inc. <greenappers@gmail.com>
+homepage: https://github.com/GreenAppers/gradient_picker
+documentation: https://github.com/GreenAppers/gradient_picker/wiki
+
+environment:
+  sdk: ">=2.1.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
