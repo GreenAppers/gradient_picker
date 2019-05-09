@@ -166,6 +166,21 @@ class _GradientPickerState extends State<GradientPicker> {
   }
 }
 
+class GradientPainter extends CustomPainter {
+  Paint style;
+  GradientSpec gradient;
+  GradientPainter(this.style, this.gradient);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    style.shader = gradient.build(Rect.fromLTWH(0.0, 0.0, size.width.toDouble(), size.height.toDouble()));
+    canvas.drawPaint(style);
+  }
+
+  @override
+  bool shouldRepaint(GradientPainter oldDelegate) => true;
+}
+
 class NumberPicker extends StatefulWidget {
   String title;
   DoubleCallback value;
@@ -224,20 +239,53 @@ class _NumberPickerState extends State<NumberPicker> {
   }
 }
 
-class GradientPainter extends CustomPainter {
-  Paint style;
-  GradientSpec gradient;
-  GradientPainter(this.style, this.gradient);
+class PopupMenuBuilder {
+  final Icon icon;
+  int nextIndex = 0;
+  List<PopupMenuItem<int>> item = <PopupMenuItem<int>>[];
+  List<VoidCallback> onSelectedCallback = <VoidCallback>[];
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    style.shader = gradient.build(Rect.fromLTWH(0.0, 0.0, size.width.toDouble(), size.height.toDouble()));
-    canvas.drawPaint(style);
+  PopupMenuBuilder({this.icon});
+
+  PopupMenuBuilder addItem({Icon icon, String text, VoidCallback onSelected}) {
+    onSelectedCallback.add(onSelected);
+    if (icon != null) {
+      item.add(
+        PopupMenuItem<int>(
+          child: Row(
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.all(8.0),
+                child: icon
+              ),
+              Container(
+                padding: const EdgeInsets.all(10.0),
+                child: Text(text),
+              ),
+            ],
+          ),
+          value: nextIndex++
+        )
+      );
+    } else {
+      item.add(
+        PopupMenuItem<int>(
+          child: Text(text),
+          value: nextIndex++
+        )
+      );
+    }
+    return this;
   }
 
-  @override
-  bool shouldRepaint(GradientPainter oldDelegate) => true;
-}
+  Widget build() {
+    return PopupMenuButton(
+      icon: icon,
+      itemBuilder: (_) => item,
+      onSelected: (int v) { onSelectedCallback[v](); }
+    );
+  }
+} 
 
 String enumName(var x) {
   String ret = x.toString().split('.')[1];
