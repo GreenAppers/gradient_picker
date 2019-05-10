@@ -84,8 +84,7 @@ class GradientSpec {
 
 class GradientPicker extends StatefulWidget {
   GradientSpec gradient;
-  Paint paint;
-  GradientPicker(this.gradient, this.paint);
+  GradientPicker(this.gradient);
 
   @override
   _GradientPickerState createState() => _GradientPickerState();
@@ -155,7 +154,7 @@ class _GradientPickerState extends State<GradientPicker> {
               height: 100,
               child: ClipRect(
                 child: CustomPaint(
-                  painter: GradientPainter(widget.paint, widget.gradient),
+                  painter: GradientPainter(widget.gradient),
                 ),
               ),
             ),
@@ -167,14 +166,14 @@ class _GradientPickerState extends State<GradientPicker> {
 }
 
 class GradientPainter extends CustomPainter {
-  Paint style;
   GradientSpec gradient;
-  GradientPainter(this.style, this.gradient);
+  GradientPainter(this.gradient);
 
   @override
   void paint(Canvas canvas, Size size) {
-    style.shader = gradient.build(Rect.fromLTWH(0.0, 0.0, size.width.toDouble(), size.height.toDouble()));
-    canvas.drawPaint(style);
+    canvas.drawPaint(Paint()
+      ..shader = gradient.build(Rect.fromLTWH(0.0, 0.0, size.width.toDouble(), size.height.toDouble()))
+    );
   }
 
   @override
@@ -184,8 +183,8 @@ class GradientPainter extends CustomPainter {
 class NumberPicker extends StatefulWidget {
   String title;
   DoubleCallback value;
-  double increment = 1.0;
-  NumberPicker(this.title, this.value, {this.increment});
+  double increment;
+  NumberPicker(this.title, this.value, {this.increment=1.0});
 
   @override
   _NumberPickerState createState() => _NumberPickerState();
