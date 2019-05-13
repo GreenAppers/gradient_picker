@@ -11,3 +11,4 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_colorpicker: any

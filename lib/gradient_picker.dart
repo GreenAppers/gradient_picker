@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart' as painting;
 
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+
 typedef DoubleCallback = double Function([double]);
 
 enum GradientType { linear, radial, sweep }
@@ -18,7 +20,25 @@ class GradientSpec {
   TileMode tileMode = TileMode.clamp;
   Float64List matrix4;
 
-  bool operator == (GradientSpec x) {
+  @override
+  int get hashCode {
+    switch(type) {
+      case GradientType.linear:
+        return hashValues(from, to, colors, colorStops, tileMode);
+      case GradientType.radial:
+        return hashValues(center, radius, colors, colorStops, tileMode, matrix4, focal, focalRadius);
+      case GradientType.sweep:
+        return hashValues(center, colors, colorStops, tileMode, startAngle, endAngle, matrix4);
+      default:
+        return 0;
+    }
+  }
+
+  @override
+  bool operator == (dynamic other) {
+    if (identical(this, other)) return true;
+    if (runtimeType != other.runtimeType) return false;
+    final GradientSpec x = other;
     if (type != x.type) return false;
     switch(type) {
       case GradientType.linear:
@@ -30,7 +50,7 @@ class GradientSpec {
         return center == x.center && colors == x.colors && colorStops == x.colorStops &&
           tileMode == x.tileMode && startAngle == x.startAngle && endAngle == x.endAngle && matrix4 == x.matrix4;
       default:
-        return true;
+        return false;
     }
   }
 
@@ -43,6 +63,8 @@ class GradientSpec {
         return ui.Gradient.radial(boxCoords(center, hw, hh), radius * (hw + hh), colors, colorStops, tileMode, matrix4, focal, focalRadius);
       case GradientType.sweep:
         return ui.Gradient.sweep(boxCoords(center, hw, hh), colors, colorStops, tileMode, startAngle, endAngle, matrix4);
+      default:
+        return null;
     }
   }
 
@@ -75,6 +97,8 @@ class GradientSpec {
           stops: colorStops, 
           tileMode: tileMode
         );
+      default:
+        return null;
     }
   }
 
@@ -83,7 +107,7 @@ class GradientSpec {
 }
 
 class GradientPicker extends StatefulWidget {
-  GradientSpec gradient;
+  final GradientSpec gradient;
   GradientPicker(this.gradient);
 
   @override
@@ -92,6 +116,7 @@ class GradientPicker extends StatefulWidget {
 
 class _GradientPickerState extends State<GradientPicker> {
   Size previewSize = Size(100, 100);
+  Color pickerColor = Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +184,14 @@ class _GradientPickerState extends State<GradientPicker> {
               ),
             ),
           ),
+
+          ColorPicker(
+            pickerColor: pickerColor,
+            onColorChanged: (Color x) { pickerColor = x; },
+            enableLabel: false,
+            pickerAreaHeightPercent: 0.35,
+          ),
+
         ].where((x) => x != null).toList(),
       ),
     );
@@ -181,9 +214,9 @@ class GradientPainter extends CustomPainter {
 }
 
 class NumberPicker extends StatefulWidget {
-  String title;
-  DoubleCallback value;
-  double increment;
+  final String title;
+  final DoubleCallback value;
+  final double increment;
   NumberPicker(this.title, this.value, {this.increment=1.0});
 
   @override
@@ -239,12 +272,9 @@ class _NumberPickerState extends State<NumberPicker> {
 }
 
 class PopupMenuBuilder {
-  final Icon icon;
   int nextIndex = 0;
   List<PopupMenuItem<int>> item = <PopupMenuItem<int>>[];
   List<VoidCallback> onSelectedCallback = <VoidCallback>[];
-
-  PopupMenuBuilder({this.icon});
 
   PopupMenuBuilder addItem({Icon icon, String text, VoidCallback onSelected}) {
     onSelectedCallback.add(onSelected);
@@ -277,9 +307,10 @@ class PopupMenuBuilder {
     return this;
   }
 
-  Widget build() {
+  Widget build({Icon icon, Widget child}) {
     return PopupMenuButton(
       icon: icon,
+      child: child,
       itemBuilder: (_) => item,
       onSelected: (int v) { onSelectedCallback[v](); }
     );
