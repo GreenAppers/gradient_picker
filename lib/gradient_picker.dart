@@ -2,12 +2,14 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart' as painting;
 
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
 typedef DoubleCallback = double Function([double]);
+typedef DoubleItemCallback = void Function(int, double);
 
 enum GradientType { linear, radial, sweep }
 
@@ -116,7 +118,7 @@ class GradientPicker extends StatefulWidget {
 
 class _GradientPickerState extends State<GradientPicker> {
   Size previewSize = Size(100, 100);
-  Color pickerColor = Colors.white;
+  int selectedColorIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +126,7 @@ class _GradientPickerState extends State<GradientPicker> {
       width: double.maxFinite,
       child: ListView(
         shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         children: <Widget>[
           ListTile(
             title: Text('Type'),
@@ -145,33 +148,53 @@ class _GradientPickerState extends State<GradientPicker> {
             ),
           ),
 
-          widget.gradient.type == GradientType.radial ? NumberPicker(
-            'Radius', ([double x]) {
-              if (x != null) setState(() => widget.gradient.radius = x);
-              return widget.gradient.radius;
-            }, increment: 0.01,
-          ) : null,
+          widget.gradient.type == GradientType.radial ?
+            ListTile(
+              title: Text('Radius'),
+              trailing: NumberPicker(
+                ([double x]) {
+                  if (x != null) setState(() => widget.gradient.radius = x);
+                  return widget.gradient.radius;
+                },
+                increment: 0.01,
+              ),
+            ) : null,
 
-          widget.gradient.type == GradientType.radial ? NumberPicker(
-            'Focal Radius', ([double x]) {
-              if (x != null) setState(() => widget.gradient.focalRadius = x);
-              return widget.gradient.focalRadius;
-            }, increment: 0.01,
-          ) : null,
+          widget.gradient.type == GradientType.radial ?
+            ListTile(
+              title: Text('Focal Radius'),
+              trailing: NumberPicker(
+                ([double x]) {
+                  if (x != null) setState(() => widget.gradient.focalRadius = x);
+                  return widget.gradient.focalRadius;
+                },
+                increment: 0.01,
+              ),
+            ) : null,
 
-          widget.gradient.type == GradientType.sweep ? NumberPicker(
-            'Start Angle', ([double x]) {
-              if (x != null) setState(() => widget.gradient.startAngle = x);
-              return widget.gradient.startAngle;
-            }, increment: 0.01,
-          ) : null,
+          widget.gradient.type == GradientType.sweep ?
+            ListTile(
+              title: Text('Start Angle'),
+              trailing: NumberPicker(
+                ([double x]) {
+                  if (x != null) setState(() => widget.gradient.startAngle = x);
+                  return widget.gradient.startAngle;
+                },
+                increment: 0.01,
+              ),
+            ) : null,
 
-          widget.gradient.type == GradientType.sweep ? NumberPicker(
-            'End Angle', ([double x]) {
-              if (x != null) setState(() => widget.gradient.endAngle = x);
-              return widget.gradient.endAngle;
-            }, increment: 0.01,
-          ) : null,
+          widget.gradient.type == GradientType.sweep ?
+            ListTile(
+              title: Text('End Angle'),
+              trailing: NumberPicker(
+                ([double x]) {
+                  if (x != null) setState(() => widget.gradient.endAngle = x);
+                  return widget.gradient.endAngle;
+                },
+                increment: 0.01,
+              ),
+            ) : null,
 
           Card(
             color: Colors.blueGrey[50],
@@ -184,10 +207,43 @@ class _GradientPickerState extends State<GradientPicker> {
               ),
             ),
           ),
+          
+          MultiSlider(widget.gradient.colorStops,
+            gradient: painting.LinearGradient(
+              begin:    Alignment(-1.0, 0.0),
+              end:      Alignment( 1.0, 0.0),
+              colors:   widget.gradient.colors,
+              stops:    widget.gradient.colorStops, 
+              tileMode: widget.gradient.tileMode
+            ),
+          ),
+
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                IconButton(
+                  padding: const EdgeInsets.all(0.0), 
+                  icon: Icon(Icons.arrow_left),
+                  onPressed: () =>
+                      setState(() => selectedColorIndex = (selectedColorIndex-1).clamp(0, widget.gradient.colors.length-1)),
+                ),
+              
+                Text('Color ' + (selectedColorIndex + 1).toString()),
+               
+                IconButton(
+                  padding: const EdgeInsets.all(0.0), 
+                  icon: Icon(Icons.arrow_right),
+                  onPressed: () =>
+                      setState(() => selectedColorIndex = (selectedColorIndex+1).clamp(0, widget.gradient.colors.length-1)),
+                ),
+              ],
+            ),
+          ),
 
           ColorPicker(
-            pickerColor: pickerColor,
-            onColorChanged: (Color x) { pickerColor = x; },
+            pickerColor: widget.gradient.colors[selectedColorIndex],
+            onColorChanged: (Color x) => setState(() => widget.gradient.colors[selectedColorIndex] = x),
             enableLabel: false,
             pickerAreaHeightPercent: 0.35,
           ),
@@ -214,10 +270,10 @@ class GradientPainter extends CustomPainter {
 }
 
 class NumberPicker extends StatefulWidget {
-  final String title;
   final DoubleCallback value;
-  final double increment;
-  NumberPicker(this.title, this.value, {this.increment=1.0});
+  final double width, increment;
+  final int fixed;
+  NumberPicker(this.value, {this.width=50.0, this.increment=1.0, this.fixed=3});
 
   @override
   _NumberPickerState createState() => _NumberPickerState();
@@ -234,40 +290,91 @@ class _NumberPickerState extends State<NumberPicker> {
 
   @override
   Widget build(BuildContext context) {
-    controller.text = widget.value().toStringAsFixed(3);
+    controller.text = widget.value().toStringAsFixed(widget.fixed);
 
-    return ListTile(
-      title: Text(widget.title),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          IconButton(
-            padding: const EdgeInsets.all(0.0), 
-            icon: Icon(Icons.arrow_left),
-            onPressed: () =>
-                setState((){ widget.value(widget.value() - widget.increment); }),
-          ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        IconButton(
+          padding: const EdgeInsets.all(0.0), 
+          icon: Icon(Icons.arrow_left),
+          onPressed: () =>
+              setState(() => widget.value(widget.value() - widget.increment)),
+        ),
 
-          Container(
-            width: 50,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.right,
-              keyboardType: TextInputType.number,
-              onChanged: (String v) =>
-                setState((){ widget.value(double.parse(v)); }),
-            ),
+        Container(
+          width: widget.width,
+          child: TextField(
+            controller: controller,
+            textAlign: TextAlign.right,
+            keyboardType: TextInputType.number,
+            onChanged: (String v) =>
+              setState(() => widget.value(double.parse(v))),
           ),
+        ),
 
-          IconButton(
-            padding: const EdgeInsets.all(0.0), 
-            icon: Icon(Icons.arrow_right),
-            onPressed: () =>
-                setState((){ widget.value(widget.value() + widget.increment); }),
-          ),
-        ],
-      ),
+        IconButton(
+          padding: const EdgeInsets.all(0.0), 
+          icon: Icon(Icons.arrow_right),
+          onPressed: () =>
+              setState(() => widget.value(widget.value() + widget.increment)),
+        ),
+      ],
     );
+  }
+}
+
+class MultiSlider extends StatefulWidget {
+  final List<double> positions;
+  final DoubleItemCallback onChanged;
+  final Gradient gradient;
+  final Color selectColor;
+
+  MultiSlider(this.positions, {this.onChanged, this.gradient, this.selectColor=const Color.fromRGBO(37, 213, 253, 1.0)});
+
+  @override
+  _MultiSliderState createState() => _MultiSliderState();
+}
+
+class _MultiSliderState extends State<MultiSlider> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) =>
+          Stack(children: buildSliders(constraints)),
+      ), 
+    );
+  }
+
+  List<Widget> buildSliders(BoxConstraints constraints) {
+    assert(constraints.minWidth == constraints.maxWidth);
+
+    List<Widget> ret = <Widget>[
+      Container(
+        color: widget.gradient != null ? null : Colors.grey,
+        height: 4,
+        margin: EdgeInsets.fromLTRB(0, 18, 0, 18),
+        decoration: widget.gradient == null ? null : BoxDecoration(
+           gradient: widget.gradient,
+        ),
+      ),
+    ];
+
+    for (double position in widget.positions)
+      ret.add(
+        Positioned.fromRect(
+          rect: centerRect(
+            Rect.fromLTWH(0, 0, 40, 40),
+            Offset(position * constraints.maxWidth, 20)
+          ),
+          child: Icon(Icons.open_with,
+            color: widget.selectColor,
+          ),
+        ),
+      );
+    return ret;
   }
 }
 
@@ -317,6 +424,11 @@ class PopupMenuBuilder {
   }
 } 
 
+Rect rectFromSize(Size x) => Rect.fromLTWH(0, 0, x.width, x.height);
+
+Rect centerRect(Rect x, Offset c) =>
+  Rect.fromLTWH(c.dx - x.width / 2.0, c.dy - x.height / 2.0, x.width, x.height);
+
 String enumName(var x) {
   String ret = x.toString().split('.')[1];
   return ret.length > 0 ? ret[0].toUpperCase() + ret.substring(1) : ret;
@@ -329,4 +441,28 @@ List<DropdownMenuItem<String>> buildDropdownMenuItem(List<String> x) {
       child: Text(value),
     )
   ).toList();
+}
+
+Widget buildDragRecognizer(Widget child, GestureMultiDragStartCallback onStart, {VoidCallback onTap}) {
+  var gestures = <Type, GestureRecognizerFactory> {
+    ImmediateMultiDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<ImmediateMultiDragGestureRecognizer>(
+      () => ImmediateMultiDragGestureRecognizer(),
+      (ImmediateMultiDragGestureRecognizer instance) {
+        instance..onStart = onStart;
+      }
+    )
+  };
+  if (onTap != null) {
+    gestures[TapGestureRecognizer] = GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+      () => TapGestureRecognizer(),
+      (TapGestureRecognizer instance) {
+        instance..onTap = onTap;
+      }
+    );
+  }
+  return RawGestureDetector(
+    child: child,
+    behavior: HitTestBehavior.opaque,
+    gestures: gestures,
+  );
 }
